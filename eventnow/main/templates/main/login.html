@@ -7,7 +7,7 @@ admin users to the admin panel and normal users to the EventNow main page.
 
 {% extends "main/base_public.html" %}
 
-{# 
+{#
 Login page for users to access the system.
 This page is kept simple so users can quickly sign in and continue using the platform.
 #}
@@ -30,7 +30,7 @@ This page is kept simple so users can quickly sign in and continue using the pla
     <form method="post">
         {% csrf_token %}
 
-        {# 
+        {#
         Django automatically renders username + password fields here.
         Using form.as_p keeps it simple and consistent with other forms.
         #}
