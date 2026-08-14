@@ -1,0 +1,390 @@
+{#
+Participant profile page.
+
+Participants can view their applications, update username/email, change
+password and cancel applications. JavaScript is used for smoother page updates,
+while backend views still validate ownership and form data.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+    .profile-top-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px;
+        margin-bottom: 22px;
+    }
+
+    .profile-card {
+        padding: 24px;
+    }
+
+    .profile-info-text p {
+        margin: 10px 0;
+    }
+
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #28445f;
+        font-size: 14px;
+    }
+
+    .password-input-wrapper {
+        position: relative;
+    }
+
+    .password-input-wrapper input {
+        padding-right: 50px !important;
+    }
+
+    .eye-toggle-btn {
+        position: absolute;
+        top: 50%;
+        right: 14px;
+        transform: translateY(-50%);
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 4px;
+        color: #7e93ab;
+    }
+
+    .helper-text {
+        color: var(--muted);
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
+
+    .error-text {
+        display: block;
+        color: var(--danger);
+        margin-top: 6px;
+        font-size: 13px;
+    }
+
+    .success-message {
+        background: #edf9f0;
+        border-color: #c8e7cf;
+    }
+
+    .warning-card {
+        background: #fff8e6;
+        border: 1px solid #f3d48b;
+    }
+
+    .applications-card {
+        padding: 24px;
+    }
+
+    @media (max-width: 900px) {
+        .profile-top-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-title">My Profile</div>
+
+<div id="profile-message-area"></div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="card success-message">
+            <p style="margin: 0;">{{ message }}</p>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="profile-top-grid">
+    <div class="card profile-card">
+        <h2 class="section-title">Basic Information</h2>
+
+        <div class="profile-info-text">
+            <p><strong>Current Username:</strong> <span id="current-username">{{ user.username }}</span></p>
+            <p><strong>Current Email:</strong> <span id="current-email">{{ user.email }}</span></p>
+            <p><strong>Role:</strong> {{ profile.global_role }}</p>
+        </div>
+
+        <hr>
+
+        <form method="post" id="basic-info-form">
+            {% csrf_token %}
+            <input type="hidden" name="update_profile" value="1">
+
+            <div class="form-group">
+                <label class="form-label" for="{{ profile_form.username.id_for_label }}">New Username</label>
+                {{ profile_form.username }}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ profile_form.email.id_for_label }}">New Email</label>
+                {{ profile_form.email }}
+            </div>
+
+            <button type="submit" class="button">Save Basic Information</button>
+        </form>
+    </div>
+
+    <div class="card profile-card">
+        <h2 class="section-title">Change Password</h2>
+
+        <p class="helper-text">
+            For security reasons, your current password cannot be displayed.
+        </p>
+
+        <form method="post" id="password-form">
+            {% csrf_token %}
+            <input type="hidden" name="change_password" value="1">
+
+            <div class="form-group">
+                <label class="form-label" for="{{ password_form.old_password.id_for_label }}">Current Password</label>
+                <div class="password-input-wrapper">
+                    {{ password_form.old_password }}
+                    <button type="button" class="eye-toggle-btn" data-password-target="id_old_password">Show</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ password_form.new_password1.id_for_label }}">New Password</label>
+                <div class="password-input-wrapper">
+                    {{ password_form.new_password1 }}
+                    <button type="button" class="eye-toggle-btn" data-password-target="id_new_password1">Show</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ password_form.new_password2.id_for_label }}">Confirm New Password</label>
+                <div class="password-input-wrapper">
+                    {{ password_form.new_password2 }}
+                    <button type="button" class="eye-toggle-btn" data-password-target="id_new_password2">Show</button>
+                </div>
+            </div>
+
+            <button type="submit" class="button">Change Password</button>
+        </form>
+    </div>
+</div>
+
+<div class="card applications-card">
+    <h2 class="section-title">My Applications</h2>
+    <p class="section-subtitle">You have registered for {{ applications|length }} session(s).</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Event</th>
+                    <th>Session</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for application in applications %}
+                <tr id="application-row-{{ application.id }}">
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ application.session.event.title }}</td>
+                    <td>{{ application.session.title }}</td>
+                    <td id="application-status-{{ application.id }}">{{ application.status }}</td>
+                    <td id="application-action-{{ application.id }}">
+                        {% if application.status != 'cancelled' %}
+                            <button
+                                type="button"
+                                class="button danger cancel-application-btn"
+                                data-application-id="{{ application.id }}">
+                                Cancel
+                            </button>
+                        {% else %}
+                            <span class="pill">Cancelled</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No applications found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+/*
+Page-specific JavaScript for participant profile interactions.
+
+It updates basic info, changes password, cancels applications and toggles
+password visibility. The backend validates data and ownership.
+*/
+function showProfileMessage(message, success) {
+    const area = document.getElementById("profile-message-area");
+
+    if (!area) {
+        return;
+    }
+
+    const cardClass = success ? "success-message" : "warning-card";
+
+    area.innerHTML =
+        '<div class="card ' + cardClass + '">' +
+        '<p style="margin: 0;">' + message + '</p>' +
+        '</div>';
+}
+
+function getFormCSRF(form) {
+    const csrfInput = form.querySelector("[name=csrfmiddlewaretoken]");
+
+    if (!csrfInput) {
+        return "";
+    }
+
+    return csrfInput.value;
+}
+
+const basicInfoForm = document.getElementById("basic-info-form");
+
+if (basicInfoForm) {
+    basicInfoForm.addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        const formData = new FormData(basicInfoForm);
+
+        fetch("{% url 'update_basic_info_api' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getFormCSRF(basicInfoForm)
+            },
+            body: formData
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            showProfileMessage(data.message, data.success);
+
+            if (data.success) {
+                document.getElementById("current-username").textContent = data.username;
+                document.getElementById("current-email").textContent = data.email;
+            }
+        })
+        .catch(function() {
+            showProfileMessage("Failed to update profile.", false);
+        });
+    });
+}
+
+const passwordForm = document.getElementById("password-form");
+
+if (passwordForm) {
+    passwordForm.addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        const formData = new FormData(passwordForm);
+
+        fetch("{% url 'change_password_api' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getFormCSRF(passwordForm)
+            },
+            body: formData
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            showProfileMessage(data.message, data.success);
+
+            if (data.success) {
+                passwordForm.reset();
+            }
+        })
+        .catch(function() {
+            showProfileMessage("Failed to change password.", false);
+        });
+    });
+}
+
+function cancelApplication(applicationId) {
+    const formData = new FormData();
+    const csrfToken = getFormCSRF(basicInfoForm);
+
+    fetch("/eventnow/api/applications/" + applicationId + "/cancel/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrfToken
+        },
+        body: formData
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        showProfileMessage(data.message, data.success);
+
+        if (data.success) {
+            const statusCell = document.getElementById("application-status-" + data.application_id);
+            const actionCell = document.getElementById("application-action-" + data.application_id);
+
+            if (statusCell) {
+                statusCell.textContent = data.new_status;
+            }
+
+            if (actionCell) {
+                actionCell.innerHTML = '<span class="pill">Cancelled</span>';
+            }
+        }
+    })
+    .catch(function() {
+        showProfileMessage("Failed to cancel application.", false);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const cancelButtons = document.querySelectorAll(".cancel-application-btn");
+
+    cancelButtons.forEach(function(button) {
+        button.addEventListener("click", function() {
+            const applicationId = button.getAttribute("data-application-id");
+            cancelApplication(applicationId);
+        });
+    });
+
+    const passwordButtons = document.querySelectorAll("[data-password-target]");
+
+    passwordButtons.forEach(function(button) {
+        button.addEventListener("click", function() {
+            const fieldId = button.getAttribute("data-password-target");
+            const field = document.getElementById(fieldId);
+
+            if (!field) {
+                return;
+            }
+
+            if (field.type === "password") {
+                field.type = "text";
+                button.textContent = "Hide";
+            } else {
+                field.type = "password";
+                button.textContent = "Show";
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

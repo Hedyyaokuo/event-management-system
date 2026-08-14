@@ -1,0 +1,620 @@
+{#
+Organiser profile page.
+
+This page manages subscription plan selection, event quota display, owned event
+list, joined/read-only event list, and account settings. It supports the
+SaaS-style requirement by showing organiser usage limits.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}Organiser Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+    .profile-top-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px;
+        margin-bottom: 22px;
+    }
+
+    .profile-card {
+        padding: 24px;
+    }
+
+    .profile-info-text p {
+        margin: 10px 0;
+    }
+
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #28445f;
+        font-size: 14px;
+    }
+
+    .password-input-wrapper {
+        position: relative;
+    }
+
+    .password-input-wrapper input {
+        padding-right: 50px !important;
+    }
+
+    .eye-toggle-btn {
+        position: absolute;
+        top: 50%;
+        right: 14px;
+        transform: translateY(-50%);
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 4px;
+        color: #7e93ab;
+    }
+
+    .eye-toggle-btn:hover {
+        color: #4c6888;
+    }
+
+    .eye-toggle-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .helper-text {
+        color: var(--muted);
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
+
+    .error-text {
+        display: block;
+        color: var(--danger);
+        margin-top: 6px;
+        font-size: 13px;
+    }
+
+    .success-message {
+        background: #edf9f0;
+        border-color: #c8e7cf;
+    }
+
+    .warning-card {
+        background: #fff8e6;
+        border: 1px solid #f3d48b;
+    }
+
+    .usage-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-top: 16px;
+    }
+
+    .usage-box {
+        background: var(--surface-soft);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 16px;
+    }
+
+    .usage-number {
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--heading);
+        margin: 0;
+    }
+
+    .usage-label {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+    }
+
+    .plan-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px;
+        margin-top: 18px;
+    }
+
+    .plan-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 320px;
+    }
+
+    .plan-price {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--heading);
+        margin: 8px 0 12px;
+    }
+
+    .plan-meta {
+        margin: 12px 0;
+    }
+
+    .plan-meta p {
+        margin: 8px 0;
+    }
+
+    .profile-event-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 22px;
+        align-items: stretch;
+    }
+
+    .profile-event-card {
+        margin-bottom: 0;
+        min-width: 0;
+        overflow: hidden;
+    }
+    
+    .profile-event-title {
+    margin: 4px 0 12px;
+    color: var(--heading);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+    }
+
+    .profile-event-image {
+        width: 100%;
+        height: 180px;
+        max-height: 180px;
+        border-radius: 18px;
+        overflow: hidden;
+        background: var(--primary-light);
+        border: 1px solid #bfd4ea;
+        margin-bottom: 14px;
+    }
+
+    .profile-event-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+    }
+
+    .profile-event-image.placeholder-image {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 14px;
+        text-align: center;
+    }
+
+    @media (max-width: 900px) {
+        .profile-top-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .usage-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .plan-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .profile-event-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .usage-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .profile-event-image {
+            height: 170px;
+            max-height: 170px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Organiser Profile</div>
+
+<div id="profile-message-area"></div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="card {% if message.tags == 'error' %}warning-card{% else %}success-message{% endif %}">
+            <p style="margin: 0;">{{ message }}</p>
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% if not plan %}
+<div class="card">
+    <h2 class="section-title">Choose a Subscription Plan First</h2>
+    <p class="section-subtitle">
+        Before creating events, organisers need to choose a subscription plan. This simulates how a real SaaS platform controls usage limits.
+    </p>
+
+    <div class="plan-grid">
+        {% for item in active_plans %}
+            <div class="card plan-card" style="margin-bottom: 0;">
+                <div>
+                    <h2 class="section-title">{{ item.name }}</h2>
+                    <div class="plan-price">${{ item.price }}</div>
+                    <p class="section-subtitle">{{ item.description }}</p>
+
+                    <div class="plan-meta">
+                        <p><strong>Max Events:</strong> {{ item.max_events }}</p>
+                        <p><strong>Max Sessions per Event:</strong> {{ item.max_sessions_per_event }}</p>
+                        <p><strong>Status:</strong> {{ item.status }}</p>
+                    </div>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="choose_plan" value="1">
+                    <input type="hidden" name="plan_id" value="{{ item.id }}">
+                    <button type="submit" class="button" style="width: 100%;">Choose This Plan</button>
+                </form>
+            </div>
+        {% empty %}
+            <div class="card warning-card" style="margin-bottom: 0;">
+                <p style="margin: 0;">
+                    No active subscription plans are available. Please contact the system admin.
+                </p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if plan %}
+<div class="card">
+    <h2 class="section-title">Subscription Usage</h2>
+    <p class="section-subtitle">
+        Your subscription plan controls how many events you can create in EventNow.
+    </p>
+
+    <div class="profile-info-text">
+        <p><strong>Current Plan:</strong> {{ plan.name }}</p>
+        <p><strong>Status:</strong> {{ plan.status }}</p>
+        <p><strong>Price:</strong> ${{ plan.price }}</p>
+    </div>
+
+    <div class="usage-grid">
+        <div class="usage-box">
+            <p class="usage-number">{{ plan.max_events }}</p>
+            <p class="usage-label">Max Events</p>
+        </div>
+
+        <div class="usage-box">
+            <p class="usage-number">{{ current_event_count }}</p>
+            <p class="usage-label">Created Events</p>
+        </div>
+
+        <div class="usage-box">
+            <p class="usage-number">{{ remaining_events }}</p>
+            <p class="usage-label">Remaining Events</p>
+        </div>
+
+        <div class="usage-box">
+            <p class="usage-number">{{ plan.max_sessions_per_event }}</p>
+            <p class="usage-label">Max Sessions / Event</p>
+        </div>
+    </div>
+
+    {% if not can_create_event %}
+        <div class="card warning-card" style="margin-top: 18px; margin-bottom: 0;">
+            <p style="margin: 0;">
+                You have reached the event limit for your current subscription plan.
+                Please archive an existing event or contact the admin to upgrade your plan.
+            </p>
+        </div>
+    {% endif %}
+</div>
+
+<div class="profile-top-grid">
+    <div class="card profile-card">
+        <h2 class="section-title">Basic Information</h2>
+
+        <div class="profile-info-text">
+            <p><strong>Current Username:</strong> <span id="current-username">{{ user.username }}</span></p>
+            <p><strong>Current Email:</strong> <span id="current-email">{{ user.email }}</span></p>
+            <p><strong>Role:</strong> {{ profile.global_role }}</p>
+        </div>
+
+        <hr>
+
+        <form method="post" id="basic-info-form">
+            {% csrf_token %}
+            <input type="hidden" name="update_profile" value="1">
+
+            <div class="form-group">
+                <label class="form-label" for="{{ profile_form.username.id_for_label }}">New Username</label>
+                {{ profile_form.username }}
+                {% if profile_form.username.errors %}
+                    <span class="error-text">{{ profile_form.username.errors|striptags }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ profile_form.email.id_for_label }}">New Email</label>
+                {{ profile_form.email }}
+                {% if profile_form.email.errors %}
+                    <span class="error-text">{{ profile_form.email.errors|striptags }}</span>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="button">Save Basic Information</button>
+        </form>
+    </div>
+
+    <div class="card profile-card">
+        <h2 class="section-title">Change Password</h2>
+
+        <p class="helper-text">
+            For security reasons, your current password cannot be displayed.
+        </p>
+
+        <form method="post" id="password-form">
+            {% csrf_token %}
+            <input type="hidden" name="change_password" value="1">
+
+            <div class="form-group">
+                <label class="form-label" for="{{ password_form.old_password.id_for_label }}">Current Password</label>
+                <div class="password-input-wrapper">
+                    {{ password_form.old_password }}
+                    <button type="button" class="eye-toggle-btn" onclick="togglePassword('id_old_password', this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                {% if password_form.old_password.errors %}
+                    <span class="error-text">{{ password_form.old_password.errors|striptags }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ password_form.new_password1.id_for_label }}">New Password</label>
+                <div class="password-input-wrapper">
+                    {{ password_form.new_password1 }}
+                    <button type="button" class="eye-toggle-btn" onclick="togglePassword('id_new_password1', this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                {% if password_form.new_password1.errors %}
+                    <span class="error-text">{{ password_form.new_password1.errors|striptags }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="{{ password_form.new_password2.id_for_label }}">Confirm New Password</label>
+                <div class="password-input-wrapper">
+                    {{ password_form.new_password2 }}
+                    <button type="button" class="eye-toggle-btn" onclick="togglePassword('id_new_password2', this)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                {% if password_form.new_password2.errors %}
+                    <span class="error-text">{{ password_form.new_password2.errors|striptags }}</span>
+                {% endif %}
+            </div>
+
+            {% if password_form.non_field_errors %}
+                <span class="error-text">{{ password_form.non_field_errors|striptags }}</span>
+            {% endif %}
+
+            <button type="submit" class="button">Change Password</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="section-title">Events I Organise</h2>
+    <p class="section-subtitle">Directly created and managed by you.</p>
+
+    <div class="profile-event-grid">
+        {% for event in owned_events %}
+            <div class="card profile-event-card">
+                {% if event.image %}
+    <div class="profile-event-image">
+        <img src="{{ event.image.url }}" alt="{{ event.title }}">
+    </div>
+    {% else %}
+        <div class="profile-event-image placeholder-image">
+        Event image preview
+    </div>
+    {% endif %}
+
+                <h3 class="profile-event-title">{{ event.title }}</h3>
+
+                <p><strong>Owner:</strong> {{ event.created_by.username }}</p>
+                <p><strong>Date:</strong> {{ event.start_date }} - {{ event.end_date }}</p>
+                <p><strong>Location:</strong> {{ event.location }}</p>
+                <p><strong>Status:</strong> {{ event.status }}</p>
+
+                <a href="{% url 'organiser_event_detail' event.id %}" class="button">See Details</a>
+            </div>
+        {% empty %}
+            <div class="card profile-event-card">
+                <p style="margin: 0;">You have not created any events yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="section-title">Events I Joined as Co-organiser / Collaborator</h2>
+    <p class="section-subtitle">Read-only collaboration view.</p>
+
+    <div class="profile-event-grid">
+        {% for event in joined_events %}
+            <div class="card profile-event-card">
+                {% if event.image %}
+    <div class="profile-event-image">
+        <img src="{{ event.image.url }}" alt="{{ event.title }}">
+    </div>
+    {% else %}
+    <div class="profile-event-image placeholder-image">
+        Event image preview
+    </div>
+    {% endif %}
+
+    <h3 class="profile-event-title">{{ event.title }}</h3>
+
+                <p><strong>Owner:</strong> {{ event.created_by.username }}</p>
+                <p><strong>Date:</strong> {{ event.start_date }} - {{ event.end_date }}</p>
+                <p><strong>Location:</strong> {{ event.location }}</p>
+                <p><strong>Status:</strong> {{ event.status }}</p>
+
+                <a href="{% url 'organiser_readonly_event_detail' event.id %}" class="button">See Details</a>
+            </div>
+        {% empty %}
+            <div class="card profile-event-card">
+                <p style="margin: 0;">You are not a co-organiser of any events yet.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card hero-card" style="text-align: center;">
+    <h2 style="margin-top: 0; margin-bottom: 10px;">Ready to publish something new?</h2>
+
+    {% if can_create_event %}
+        <p style="margin: 0 0 20px;">
+            Create a fresh event and continue building your organiser portfolio.
+        </p>
+        <div class="form-actions" style="justify-content: center;">
+            <a href="{% url 'create_event' %}" class="button secondary" style="width: auto;">Create New Event</a>
+        </div>
+    {% else %}
+        <p style="margin: 0;">
+            Event creation is currently unavailable because your subscription plan has no remaining event quota.
+        </p>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+/*
+Page-specific JavaScript for organiser profile interactions.
+
+It handles profile/password updates and password visibility toggles. Subscription
+plan selection stays as a normal Django form submission for reliability.
+*/
+function showProfileMessage(message, success = true) {
+    const area = document.getElementById("profile-message-area");
+    if (!area) return;
+
+    area.innerHTML =
+        '<div class="card ' + (success ? 'success-message' : 'warning-card') + '">' +
+        '<p style="margin: 0;">' + message + '</p>' +
+        '</div>';
+}
+
+function getFormCSRF(form) {
+    const csrfInput = form.querySelector("[name=csrfmiddlewaretoken]");
+    return csrfInput ? csrfInput.value : "";
+}
+
+const basicInfoForm = document.getElementById("basic-info-form");
+
+if (basicInfoForm) {
+    basicInfoForm.addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        const formData = new FormData(basicInfoForm);
+
+        fetch("{% url 'update_basic_info_api' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getFormCSRF(basicInfoForm)
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            showProfileMessage(data.message, data.success);
+
+            if (data.success) {
+                document.getElementById("current-username").textContent = data.username;
+                document.getElementById("current-email").textContent = data.email;
+            }
+        })
+        .catch(() => {
+            showProfileMessage("Failed to update profile.", false);
+        });
+    });
+}
+
+const passwordForm = document.getElementById("password-form");
+
+if (passwordForm) {
+    passwordForm.addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        const formData = new FormData(passwordForm);
+
+        fetch("{% url 'change_password_api' %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getFormCSRF(passwordForm)
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            showProfileMessage(data.message, data.success);
+
+            if (data.success) {
+                passwordForm.reset();
+            }
+        })
+        .catch(() => {
+            showProfileMessage("Failed to change password.", false);
+        });
+    });
+}
+
+function eyeOpenSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+}
+
+function eyeClosedSvg() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18"></path><path d="M10.6 10.7a2 2 0 0 0 2.7 2.7"></path><path d="M9.4 5.5A10.7 10.7 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2"></path><path d="M6.6 6.7C3.8 8.3 2 12 2 12a17.7 17.7 0 0 0 10 7 9.8 9.8 0 0 0 5.2-1.5"></path></svg>';
+}
+
+function togglePassword(fieldId, button) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    if (field.type === "password") {
+        field.type = "text";
+        button.innerHTML = eyeClosedSvg();
+    } else {
+        field.type = "password";
+        button.innerHTML = eyeOpenSvg();
+    }
+}
+</script>
+{% endblock %}

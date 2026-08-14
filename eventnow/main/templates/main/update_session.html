@@ -1,0 +1,34 @@
+{#
+Update session page for organisers.
+
+The event owner can update session time, location, capacity and status. If a
+session becomes non-open, the backend invalidates related pending/accepted
+applications.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}Update Session{% endblock %}
+
+{% block content %}
+<div class="page-title">Update Session</div>
+
+<div class="card soft-card">
+    <h2 class="section-title" style="margin-bottom: 8px;">{{ session.title }}</h2>
+    <p class="section-subtitle" style="margin-bottom: 0;">
+        <strong>Event:</strong> {{ event.title }}
+    </p>
+</div>
+
+<div class="card">
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <div class="form-actions">
+            <button type="submit" class="button">Save Changes</button>
+            <a href="{% url 'organiser_event_detail' event.id %}" class="button secondary">Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

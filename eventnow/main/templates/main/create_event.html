@@ -1,0 +1,69 @@
+{#
+Create event page for organisers.
+
+The form collects event details. The backend view sets the event owner and
+default active status, so sensitive fields are not trusted from browser input.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}Create New Event{% endblock %}
+
+{% block content %}
+<div class="page-title">Create New Event</div>
+
+<div class="card soft-card" style="margin-bottom: 18px;">
+    <h2 class="section-title">Organiser Setup</h2>
+    <p class="section-subtitle" style="margin-bottom: 0;">
+        Add the key details of your event below. Newly created events are active by default and can be changed later from the update page.
+    </p>
+</div>
+
+<div class="card">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="grid-2">
+            <div>
+                <label><strong>Title</strong></label>
+                {{ form.title }}
+            </div>
+
+            <div>
+                <label><strong>Category</strong></label>
+                {{ form.category }}
+            </div>
+
+            <div>
+                <label><strong>Start Date</strong></label>
+                {{ form.start_date }}
+            </div>
+
+            <div>
+                <label><strong>End Date</strong></label>
+                {{ form.end_date }}
+            </div>
+
+            <div>
+                <label><strong>Location</strong></label>
+                {{ form.location }}
+            </div>
+        </div>
+
+        <div style="margin-top: 6px;">
+            <label><strong>Description</strong></label>
+            {{ form.description }}
+        </div>
+
+        <div>
+            <label><strong>Event Image</strong></label>
+            {{ form.image }}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="button">Create Event</button>
+            <a href="{% url 'organiser_profile' %}" class="button secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and local configuration
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Django runtime files
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Build and logs
+*.log
+dist/
+build/
+*.egg-info/
+
+# Course submission document kept locally
+s5004312_WebProjectFeatureDeclarationForm.docx

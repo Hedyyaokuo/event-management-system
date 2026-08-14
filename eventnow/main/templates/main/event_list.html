@@ -1,0 +1,134 @@
+{#
+Main EventNow browsing page after login.
+
+Users can filter events by category, location and status. Organisers are sent
+to organiser management pages, while participants are sent to participant
+event detail pages.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}Event List{% endblock %}
+
+{% block content %}
+
+<div class="card hero-card">
+    <div class="stack">
+        <div class="pill" style="background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.22); color: white; width: fit-content;">
+            Event Discovery
+        </div>
+
+        <div class="page-title" style="margin-bottom: 0;">Welcome to EventNow</div>
+
+        <p class="section-subtitle" style="margin-bottom: 0; color: rgba(255,255,255,0.92);">
+            Browse events, filter them by category or location, and move to the relevant detail page more easily.
+        </p>
+    </div>
+</div>
+
+<div class="card soft-card">
+    <h2 class="section-title">Find an event</h2>
+    <p class="section-subtitle">Use the filters below to narrow the list.</p>
+
+    <form method="get">
+        <div class="grid-3">
+            <div>
+                <label for="category">Category</label>
+                <select id="category" name="category">
+                    <option value="">All</option>
+                    {% for item in category_options %}
+                        <option value="{{ item }}" {% if selected_category == item %}selected{% endif %}>
+                            {{ item }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="location">Location</label>
+                <input
+                    id="location"
+                    type="text"
+                    name="location"
+                    value="{{ selected_location|default:'' }}"
+                    placeholder="e.g. UQ, Sunnybank, UNSW">
+            </div>
+
+            <div>
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                    <option value="">All</option>
+                    <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="closed" {% if selected_status == 'closed' %}selected{% endif %}>Closed</option>
+                    <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="removed" {% if selected_status == 'removed' %}selected{% endif %}>Removed</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="button">Apply Filters</button>
+            <a href="{% url 'event_list' %}" class="button secondary">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div style="margin-bottom: 16px;">
+    <h2 class="section-title" style="margin-bottom: 6px;">Available events</h2>
+    <p class="section-subtitle">The card layout makes the event list easier to scan on larger and smaller screens.</p>
+</div>
+
+<div class="event-grid">
+    {% for event in events %}
+        <div class="card">
+            {% if event.image %}
+                <div class="event-image-frame compact">
+                    <img src="{{ event.image.url }}" alt="{{ event.title }}">
+                </div>
+            {% else %}
+                <div class="event-image-frame compact placeholder-image">
+                    Event image preview
+                </div>
+            {% endif %}
+
+            <h3 style="margin: 0 0 12px; color: var(--heading); font-size: 22px;">
+                {% if is_organiser %}
+                    <a href="{% url 'organiser_event_detail' event.id %}" style="color: inherit; text-decoration: none;">
+                        {{ event.title }}
+                    </a>
+                {% else %}
+                    <a href="{% url 'event_detail' event.id %}" style="color: inherit; text-decoration: none;">
+                        {{ event.title }}
+                    </a>
+                {% endif %}
+            </h3>
+
+            <div class="info-list" style="margin-bottom: 18px;">
+                <p><strong>Category:</strong> {{ event.category }}</p>
+                <p><strong>Location:</strong> {{ event.location }}</p>
+                <p><strong>Start:</strong> {{ event.start_date }}</p>
+                <p><strong>End:</strong> {{ event.end_date }}</p>
+                <p><strong>Status:</strong> {{ event.status }}</p>
+            </div>
+
+            {% if is_organiser %}
+                <a href="{% url 'organiser_event_detail' event.id %}" class="button">View Event</a>
+            {% else %}
+                {% if event.status == 'active' %}
+                    <a href="{% url 'event_detail' event.id %}" class="button">View Event</a>
+                {% else %}
+                    <div class="pill">Not available</div>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="card">
+            <h3 style="margin-top: 0;">No events found</h3>
+            <p class="muted" style="margin-bottom: 0;">
+                Try changing the filter values or reset the list to see all events again.
+            </p>
+        </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

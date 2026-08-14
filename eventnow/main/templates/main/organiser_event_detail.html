@@ -1,0 +1,645 @@
+{#
+Organiser event management page.
+
+This is the main working page for an event owner. It combines event summary,
+session creation, session management, registration records, approval/rejection
+actions and capacity summary. The JavaScript improves the interaction, but the
+backend still controls permission checks and database updates.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}{{ event.title }}{% endblock %}
+
+{% block content %}
+
+<div class="page-title">{{ event.title }}</div>
+
+<div id="page-message-area"></div>
+
+<div class="grid-2">
+    <div class="card">
+        {% if event.image %}
+            <div class="event-image-frame">
+                <img src="{{ event.image.url }}" alt="{{ event.title }}">
+            </div>
+        {% else %}
+            <div class="event-image-frame placeholder-image">
+                Event image preview
+            </div>
+        {% endif %}
+
+        <div class="info-list">
+            <p><strong>Owner:</strong> {{ event.created_by.username }}</p>
+            <p><strong>Category:</strong> {{ event.category }}</p>
+            <p><strong>Start:</strong> {{ event.start_date }}</p>
+            <p><strong>End:</strong> {{ event.end_date }}</p>
+            <p><strong>Location:</strong> {{ event.location }}</p>
+            <p><strong>Status:</strong> {{ event.status }}</p>
+            <p><strong>Total Capacity:</strong> <span id="event-total-capacity">{{ total_capacity }}</span></p>
+            <p><strong>Accepted:</strong> <span id="event-accepted-count">{{ accepted_count }}</span></p>
+            <p><strong>Remaining:</strong> <span id="event-remaining-count">{{ remaining }}</span></p>
+        </div>
+    </div>
+
+    <div class="card soft-card">
+        <h2 class="section-title">Introduction</h2>
+        <p>{{ event.description }}</p>
+
+        <div class="form-actions">
+            <a href="{% url 'update_event' event.id %}" class="button">Update Event</a>
+        </div>
+
+        {% if event.status != 'active' %}
+            <p class="status-danger" style="margin-top: 18px; margin-bottom: 0;">
+                This event is currently not active. Related pending or accepted applications should no longer remain valid.
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="section-title">Co-organisers</h2>
+    <div class="stack">
+        <ul style="margin: 0; padding-left: 20px;">
+            {% for member in members %}
+                {% if member.role == 'co_organiser' %}
+                    <li>{{ member.user.username }}</li>
+                {% endif %}
+            {% empty %}
+                <li>No co-organisers yet.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="section-title">Add New Session</h2>
+    <p class="section-subtitle">Use this form to create a new open session under the current event.</p>
+
+    <form method="post" id="create-session-form">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.title.id_for_label }}">Title:</label>
+            {{ form.title }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.session_time.id_for_label }}">Session time:</label>
+            {{ form.session_time }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.session_location.id_for_label }}">Session location:</label>
+            {{ form.session_location }}
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="{{ form.capacity.id_for_label }}">Capacity:</label>
+            {{ form.capacity }}
+        </div>
+
+        {% if form.description %}
+            <div class="form-group">
+                <label class="form-label" for="{{ form.description.id_for_label }}">Description:</label>
+                {{ form.description }}
+            </div>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="button">Add Session</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h2 class="section-title">Session Management</h2>
+    <p class="section-subtitle">Update or delete sessions from the table below. Deleted sessions will disappear from the participant event detail page.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Session Name</th>
+                    <th>Time Period</th>
+                    <th>Status</th>
+                    <th>Capacity</th>
+                    <th>Attendee</th>
+                    <th>Remaining</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="session-management-body">
+                {% for session in sessions %}
+                    {% if session.status != 'cancelled' %}
+                    <tr id="session-row-{{ session.id }}">
+                        <td>{{ session.title }}</td>
+                        <td>{{ session.session_time }}</td>
+                        <td id="session-status-{{ session.id }}">{{ session.status }}</td>
+                        <td>{{ session.capacity }}</td>
+                        <td id="session-accepted-{{ session.id }}">{{ session.accepted_count }}</td>
+                        <td id="session-remaining-{{ session.id }}">{{ session.remaining_count }}</td>
+                        <td>
+                            <div class="inline-actions session-action-group">
+                                <a href="{% url 'update_session' session.id %}" class="button action-button">Update</a>
+
+                                <button
+                                    type="button"
+                                    class="button danger action-button delete-session-btn"
+                                    data-session-id="{{ session.id }}">
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% empty %}
+                <tr id="no-session-row">
+                    <td colspan="7">No sessions yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="section-title">Registration Records</h2>
+    <p class="section-subtitle">Review participant applications and process pending ones.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Interest</th>
+                    <th>Time</th>
+                    <th>Session</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="registration-record-body">
+                {% for application in applications %}
+                <tr id="application-row-{{ application.id }}">
+                    <td>{{ application.user.username }}</td>
+                    <td>{{ application.user.email }}</td>
+                    <td>{{ application.motivation }}</td>
+                    <td>{{ application.applied_at }}</td>
+                    <td>{{ application.session.title }}</td>
+
+                    <td id="application-status-{{ application.id }}">
+                        {% if application.status == 'invalid' %}
+                            <span class="status-danger">Invalid</span>
+                        {% else %}
+                            {{ application.status }}
+                        {% endif %}
+                    </td>
+
+                    <td id="application-action-{{ application.id }}">
+                        {% if application.status == 'pending' %}
+                            <div class="inline-actions record-action-group">
+                                <button
+                                    type="button"
+                                    class="button action-button application-status-btn"
+                                    data-application-id="{{ application.id }}"
+                                    data-action="approve">
+                                    Approve
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="button danger action-button application-status-btn"
+                                    data-application-id="{{ application.id }}"
+                                    data-action="reject">
+                                    Reject
+                                </button>
+                            </div>
+                        {% elif application.status == 'invalid' %}
+                            <div class="inline-actions record-action-group">
+                                <span class="pill action-pill">Disabled</span>
+                                <button
+                                    type="button"
+                                    class="button danger action-button delete-application-record-btn"
+                                    data-application-id="{{ application.id }}">
+                                    Delete
+                                </button>
+                            </div>
+                        {% else %}
+                            <div class="inline-actions record-action-group">
+                                <span class="pill action-pill">Processed</span>
+                                <button
+                                    type="button"
+                                    class="button danger action-button delete-application-record-btn"
+                                    data-application-id="{{ application.id }}">
+                                    Delete
+                                </button>
+                            </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr id="no-registration-row">
+                    <td colspan="7">No registrations yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<form id="csrf-helper-form" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<style>
+    .form-group {
+        margin-bottom: 18px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--heading);
+    }
+
+    .success-message {
+        background: #edf9f0;
+        border-color: #c8e7cf;
+    }
+
+    .warning-card {
+        background: #fff8e6;
+        border: 1px solid #f3d48b;
+    }
+
+    .session-action-group,
+    .record-action-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .action-button {
+        min-width: 96px;
+        height: 46px;
+        padding: 0 16px;
+        border-radius: 14px;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .action-pill {
+        min-width: 96px;
+        height: 46px;
+        padding: 0 16px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    @media (max-width: 700px) {
+        .session-action-group,
+        .record-action-group {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+    }
+</style>
+
+<script>
+/*
+Page-specific JavaScript for organiser event management.
+
+It handles fetch-based session creation/deletion, application approval/rejection,
+registration record deletion and summary updates. The frontend only updates the
+page; Django views still check role, ownership, capacity and database rules.
+*/
+function getCSRFToken() {
+    const csrfInput = document.querySelector("#csrf-helper-form [name=csrfmiddlewaretoken]");
+    if (!csrfInput) {
+        return "";
+    }
+    return csrfInput.value;
+}
+
+function showPageMessage(message, success) {
+    const area = document.getElementById("page-message-area");
+    if (!area) {
+        return;
+    }
+
+    const cardClass = success ? "success-message" : "warning-card";
+
+    area.innerHTML =
+        '<div class="card ' + cardClass + '">' +
+        '<p style="margin: 0;">' + message + '</p>' +
+        '</div>';
+}
+
+function updateEventSummary(data) {
+    const totalCapacity = document.getElementById("event-total-capacity");
+    const acceptedCount = document.getElementById("event-accepted-count");
+    const remainingCount = document.getElementById("event-remaining-count");
+
+    if (totalCapacity && data.total_capacity !== undefined) {
+        totalCapacity.textContent = data.total_capacity;
+    }
+
+    if (acceptedCount && data.event_accepted_count !== undefined) {
+        acceptedCount.textContent = data.event_accepted_count;
+    }
+
+    if (remainingCount && data.event_remaining_count !== undefined) {
+        remainingCount.textContent = data.event_remaining_count;
+    }
+}
+
+function buildSessionRow(session) {
+    return (
+        '<tr id="session-row-' + session.session_id + '">' +
+            '<td>' + session.title + '</td>' +
+            '<td>' + session.session_time + '</td>' +
+            '<td id="session-status-' + session.session_id + '">' + session.status + '</td>' +
+            '<td>' + session.capacity + '</td>' +
+            '<td id="session-accepted-' + session.session_id + '">' + session.accepted_count + '</td>' +
+            '<td id="session-remaining-' + session.session_id + '">' + session.remaining_count + '</td>' +
+            '<td>' +
+                '<div class="inline-actions session-action-group">' +
+                    '<a href="/eventnow/organiser/session/' + session.session_id + '/update/" class="button action-button">Update</a>' +
+                    '<button type="button" class="button danger action-button delete-session-btn" data-session-id="' + session.session_id + '">Delete</button>' +
+                '</div>' +
+            '</td>' +
+        '</tr>'
+    );
+}
+
+function updateApplicationActionToProcessed(applicationId) {
+    const actionCell = document.getElementById("application-action-" + applicationId);
+
+    if (actionCell) {
+        actionCell.innerHTML =
+            '<div class="inline-actions record-action-group">' +
+                '<span class="pill action-pill">Processed</span>' +
+                '<button type="button" class="button danger action-button delete-application-record-btn" data-application-id="' + applicationId + '">Delete</button>' +
+            '</div>';
+    }
+
+    bindApplicationRecordDeleteButtons();
+}
+
+function updateApplicationActionToDisabled(applicationId) {
+    const actionCell = document.getElementById("application-action-" + applicationId);
+
+    if (actionCell) {
+        actionCell.innerHTML =
+            '<div class="inline-actions record-action-group">' +
+                '<span class="pill action-pill">Disabled</span>' +
+                '<button type="button" class="button danger action-button delete-application-record-btn" data-application-id="' + applicationId + '">Delete</button>' +
+            '</div>';
+    }
+
+    bindApplicationRecordDeleteButtons();
+}
+
+function createSession(eventId) {
+    const form = document.getElementById("create-session-form");
+    const formData = new FormData(form);
+
+    fetch("/eventnow/api/events/" + eventId + "/sessions/create/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCSRFToken()
+        },
+        body: formData
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (!data.success) {
+            showPageMessage(data.message || "Failed to create session.", false);
+            return;
+        }
+
+        const tableBody = document.getElementById("session-management-body");
+        const emptyRow = document.getElementById("no-session-row");
+
+        if (emptyRow) {
+            emptyRow.remove();
+        }
+
+        tableBody.insertAdjacentHTML("beforeend", buildSessionRow(data.session));
+
+        form.reset();
+        updateEventSummary(data);
+        bindSessionDeleteButtons();
+        showPageMessage(data.message, true);
+    })
+    .catch(function() {
+        showPageMessage("Failed to create session.", false);
+    });
+}
+
+function deleteSession(sessionId) {
+    if (!confirm("Delete this session? It will disappear from the participant event detail page, and related active applications will become invalid.")) {
+        return;
+    }
+
+    fetch("/eventnow/api/sessions/" + sessionId + "/delete/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCSRFToken()
+        },
+        body: new FormData()
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (!data.success) {
+            showPageMessage(data.message || "Failed to delete session.", false);
+            return;
+        }
+
+        const sessionRow = document.getElementById("session-row-" + data.session_id);
+        if (sessionRow) {
+            sessionRow.remove();
+        }
+
+        data.invalid_application_ids.forEach(function(applicationId) {
+            const statusCell = document.getElementById("application-status-" + applicationId);
+
+            if (statusCell) {
+                statusCell.innerHTML = '<span class="status-danger">Invalid</span>';
+            }
+
+            updateApplicationActionToDisabled(applicationId);
+        });
+
+        updateEventSummary(data);
+        showPageMessage(data.message, true);
+    })
+    .catch(function() {
+        showPageMessage("Failed to delete session.", false);
+    });
+}
+
+function updateApplicationStatus(applicationId, action) {
+    const formData = new FormData();
+    formData.append("action", action);
+
+    fetch("/eventnow/api/applications/" + applicationId + "/status/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCSRFToken()
+        },
+        body: formData
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (!data.success) {
+            showPageMessage(data.message || "Failed to update application.", false);
+            return;
+        }
+
+        const statusCell = document.getElementById("application-status-" + data.application_id);
+        if (statusCell) {
+            statusCell.textContent = data.new_status;
+        }
+
+        updateApplicationActionToProcessed(data.application_id);
+
+        const acceptedCell = document.getElementById("session-accepted-" + data.session_id);
+        if (acceptedCell) {
+            acceptedCell.textContent = data.accepted_count;
+        }
+
+        const remainingCell = document.getElementById("session-remaining-" + data.session_id);
+        if (remainingCell) {
+            remainingCell.textContent = data.remaining_count;
+        }
+
+        updateEventSummary(data);
+        showPageMessage(data.message, true);
+    })
+    .catch(function() {
+        showPageMessage("Failed to update application status.", false);
+    });
+}
+
+function deleteApplicationRecord(applicationId) {
+    if (!confirm("Delete this registration record from the table?")) {
+        return;
+    }
+
+    fetch("/eventnow/api/applications/" + applicationId + "/record/delete/", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": getCSRFToken()
+        },
+        body: new FormData()
+    })
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (!data.success) {
+            showPageMessage(data.message || "Failed to delete registration record.", false);
+            return;
+        }
+
+        const row = document.getElementById("application-row-" + data.application_id);
+        if (row) {
+            row.remove();
+        }
+
+        updateEventSummary(data);
+        showPageMessage(data.message, true);
+    })
+    .catch(function() {
+        showPageMessage("Failed to delete registration record.", false);
+    });
+}
+
+function bindSessionDeleteButtons() {
+    const buttons = document.querySelectorAll(".delete-session-btn");
+
+    buttons.forEach(function(button) {
+        if (button.dataset.bound === "1") {
+            return;
+        }
+
+        button.dataset.bound = "1";
+
+        button.addEventListener("click", function() {
+            const sessionId = button.getAttribute("data-session-id");
+            deleteSession(sessionId);
+        });
+    });
+}
+
+function bindApplicationStatusButtons() {
+    const buttons = document.querySelectorAll(".application-status-btn");
+
+    buttons.forEach(function(button) {
+        if (button.dataset.bound === "1") {
+            return;
+        }
+
+        button.dataset.bound = "1";
+
+        button.addEventListener("click", function() {
+            const applicationId = button.getAttribute("data-application-id");
+            const action = button.getAttribute("data-action");
+
+            updateApplicationStatus(applicationId, action);
+        });
+    });
+}
+
+function bindApplicationRecordDeleteButtons() {
+    const buttons = document.querySelectorAll(".delete-application-record-btn");
+
+    buttons.forEach(function(button) {
+        if (button.dataset.bound === "1") {
+            return;
+        }
+
+        button.dataset.bound = "1";
+
+        button.addEventListener("click", function() {
+            const applicationId = button.getAttribute("data-application-id");
+            deleteApplicationRecord(applicationId);
+        });
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const createSessionForm = document.getElementById("create-session-form");
+
+    if (createSessionForm) {
+        createSessionForm.addEventListener("submit", function(eventObject) {
+            eventObject.preventDefault();
+            createSession({{ event.id }});
+        });
+    }
+
+    bindSessionDeleteButtons();
+    bindApplicationStatusButtons();
+    bindApplicationRecordDeleteButtons();
+});
+</script>
+
+{% endblock %}
