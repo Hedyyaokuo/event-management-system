@@ -26,6 +26,46 @@ EventNow 是一个基于 Django 的活动管理 Web 应用，面向三类角色�
 - 订阅计划：组织者需要选择订阅计划，系统根据计划限制活动数量和场次数量。
 - EventNow Assistant：通过规则意图识别、数据库记录和知识文章回答常见问题。
 
+## 项目界面
+
+> 以下截图来自项目在学校 UQCloud 虚拟平台上的真实运行环境。由于该教学环境不提供长期公开访问，这里通过界面截图展示主要功能和角色工作流。
+
+### 登录与身份认证
+
+用户可以登录已有账号，也可以进入注册页面创建参与者或组织者账号。登录后，系统会根据用户角色进入对应的功能流程。
+
+![EventNow 登录页面](docs/screenshots/login.png)
+
+### 活动发现与筛选
+
+参与者可以按照活动分类、地点和状态筛选活动，并通过卡片快速查看活动摘要和封面。
+
+![活动发现与筛选页面](docs/screenshots/event-discovery.png)
+
+### 组织者活动管理
+
+组织者可以查看活动信息、容量和报名情况，并继续更新活动、管理场次和处理参与者申请。
+
+![组织者活动详情页面](docs/screenshots/organiser-event-detail.png)
+
+### 场次报名流程
+
+参与者在确认活动、场次、时间和地点后，可以填写报名动机并提交申请。
+
+![场次报名页面](docs/screenshots/session-registration.png)
+
+提交成功后，系统会阻止同一用户重复报名同一场次，并引导用户返回个人中心查看申请状态。
+
+![报名结果页面](docs/screenshots/application-confirmation.png)
+
+### EventNow Assistant
+
+页面内置基于数据库信息和规则意图识别的助手，可回答热门活动、场次、剩余容量和平台操作等问题。
+
+<p align="center">
+  <img src="docs/screenshots/assistant.png" alt="EventNow Assistant 对话界面" width="360">
+</p>
+
 ## 技术栈
 
 - Python
@@ -45,6 +85,7 @@ s5004312_finalwebproject/
 ├── .github/workflows/django.yml
 ├── .env.example
 ├── .gitignore
+├── docs/screenshots/         # README 使用的真实运行截图
 ├── manage.py
 ├── requirements.txt
 ├── README.md
