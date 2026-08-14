@@ -1,0 +1,68 @@
+{#
+Session application page.
+
+This page lets a participant check the selected session first, then submit
+a short application form. The backend view still checks event status, session
+status, capacity and duplicate applications before saving anything.
+#}
+
+{% extends "main/base.html" %}
+
+{#
+Session application page.
+This page lets users confirm the selected session first, then submit their application form.
+#}
+
+{% block title %}Apply{% endblock %}
+
+{% block content %}
+
+{# Main title for this page #}
+<div class="page-title">Session Registration</div>
+
+{# Two-column layout: left side shows session summary, right side shows the application form #}
+<div class="grid-2">
+
+    <div class="card soft-card">
+        <h2 class="section-title">Registration Summary</h2>
+
+        {# Show key session details first so users know exactly what they are applying for #}
+        <div class="info-list">
+            <p><strong>Event:</strong> {{ session.event.title }}</p>
+            <p><strong>Session:</strong> {{ session.title }}</p>
+            <p><strong>Time:</strong> {{ session.session_time }}</p>
+            <p><strong>Location:</strong> {{ session.session_location }}</p>
+        </div>
+
+        {# A short reminder to encourage careful form submission #}
+        <p class="section-subtitle" style="margin-top: 16px; margin-bottom: 0;">
+            Please complete the form carefully before submitting your application.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">Your Application</h2>
+
+        {#
+        Application form submitted back to the current view.
+        Django will validate the form and process the registration in the backend.
+        #}
+        <form method="post">
+            {% csrf_token %}
+
+            {# Render the Django form fields automatically #}
+            {{ form.as_p }}
+
+            <div class="form-actions">
+                {# Submit the application #}
+                <button type="submit" class="button">Submit Application</button>
+
+                {# Allow users to return to the event detail page without submitting #}
+                <a href="{% url 'event_detail' session.event.id %}" class="button secondary">Back to Event</a>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}

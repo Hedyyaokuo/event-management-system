@@ -1,0 +1,27 @@
+{#
+Application result page.
+
+This page shows the result after a participant tries to apply for a session.
+The message may be a success message or a blocked-registration message,
+depending on the backend validation result.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}Success{% endblock %}
+
+{% block content %}
+<div class="card hero-card" style="max-width: 760px;">
+    <div class="pill" style="background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.22); color: white; width: fit-content;">
+        Application Status
+    </div>
+    <h1 style="margin: 16px 0 12px; font-size: 34px;">{{ message }}</h1>
+    <p style="margin: 0 0 10px;">Session: <strong>{{ session.title }}</strong></p>
+    <p style="margin: 0 0 24px;">Your registration record is now available in your profile page.</p>
+
+    <div class="form-actions">
+        <a class="button secondary" href="{% url 'profile' %}" style="width: auto;">Go to My Profile</a>
+        <a class="button secondary" href="{% url 'event_list' %}" style="width: auto;">Back to Event List</a>
+    </div>
+</div>
+{% endblock %}

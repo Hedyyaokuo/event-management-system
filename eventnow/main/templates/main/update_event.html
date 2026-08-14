@@ -1,0 +1,79 @@
+{#
+Update event page for organisers.
+
+The event owner can update event details and lifecycle status. If the event
+becomes non-active, the backend invalidates related pending/accepted
+applications.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}Update Event{% endblock %}
+
+{% block content %}
+<div class="page-title">Update Event</div>
+
+<div class="card soft-card">
+    <h2 class="section-title" style="margin-bottom: 8px;">{{ event.title }}</h2>
+    <p class="section-subtitle" style="margin-bottom: 0;">
+        Update the essential event information below.
+    </p>
+</div>
+
+<div class="card">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div>
+            <label><strong>Description</strong></label>
+            {{ form.description }}
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <label><strong>Start Date</strong></label>
+                {{ form.start_date }}
+            </div>
+
+            <div>
+                <label><strong>End Date</strong></label>
+                {{ form.end_date }}
+            </div>
+
+            <div>
+                <label><strong>Location</strong></label>
+                {{ form.location }}
+            </div>
+
+            <div>
+                <label><strong>Status</strong></label>
+                {{ form.status }}
+            </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+            <label><strong>Current Image</strong></label>
+
+            {% if event.image %}
+                <div class="placeholder-image" style="padding: 0; overflow: hidden; min-height: 220px; margin-top: 8px; margin-bottom: 12px;">
+                    <img src="{{ event.image.url }}" alt="{{ event.title }}" style="width: 100%; height: 260px; object-fit: cover; display: block;">
+                </div>
+            {% else %}
+                <div class="placeholder-image" style="min-height: 180px; margin-top: 8px; margin-bottom: 12px;">
+                    Event image preview
+                </div>
+            {% endif %}
+        </div>
+
+        <div>
+            <label><strong>Update Image</strong></label>
+            {{ form.image }}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="button">Save Changes</button>
+            <a href="{% url 'organiser_event_detail' event.id %}" class="button secondary">Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

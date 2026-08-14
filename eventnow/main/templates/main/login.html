@@ -1,0 +1,51 @@
+{#
+Login page.
+
+This page uses Django's authentication form. After login, the view redirects
+admin users to the admin panel and normal users to the EventNow main page.
+#}
+
+{% extends "main/base_public.html" %}
+
+{#
+Login page for users to access the system.
+This page is kept simple so users can quickly sign in and continue using the platform.
+#}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+    {# Page title to guide users #}
+    <h1>Welcome back</h1>
+
+    {# Short description so users know what they can do after logging in #}
+    <p class="auth-subtitle">
+        Sign in to browse events, manage registrations, and continue using EventNow.
+    </p>
+
+    {# Login form handled by Django authentication system #}
+    <form method="post">
+        {% csrf_token %}
+
+        {#
+        Django automatically renders username + password fields here.
+        Using form.as_p keeps it simple and consistent with other forms.
+        #}
+        {{ form.as_p }}
+
+        {# Submit button to trigger login #}
+        <button type="submit" class="button">Sign In</button>
+    </form>
+
+    {# Link for users who don't have an account yet #}
+    <div class="auth-footer">
+        New user?
+        <a href="{% url 'register' %}">Create an account</a>
+    </div>
+
+</div>
+
+{% endblock %}

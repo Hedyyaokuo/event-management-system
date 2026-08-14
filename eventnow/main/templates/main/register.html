@@ -1,0 +1,30 @@
+{#
+Registration page.
+
+This page creates a new user account and lets the user choose participant or
+organiser. The selected role is saved into UserProfile by the register view.
+#}
+
+{% extends "main/base_public.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Create account</h1>
+    <p class="auth-subtitle">
+        Join EventNow to explore events, register for sessions, or organise your own activities.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="button">Register</button>
+    </form>
+
+    <div class="auth-footer">
+        Already have an account?
+        <a href="{% url 'login' %}">Sign in here</a>
+    </div>
+</div>
+{% endblock %}

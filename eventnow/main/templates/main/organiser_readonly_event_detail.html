@@ -1,0 +1,79 @@
+{#
+Read-only organiser event detail page.
+
+This page is used when an organiser can view an event but is not the owner.
+It shows event/session information without edit or delete controls.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}{{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="page-title">{{ event.title }}</div>
+
+<div class="grid-2">
+    <div class="card">
+        {% if event.image %}
+            <div class="event-image-frame">
+                <img src="{{ event.image.url }}" alt="{{ event.title }}">
+            </div>
+        {% else %}
+            <div class="event-image-frame placeholder-image">
+                Event image preview
+            </div>
+        {% endif %}
+
+        <div class="info-list">
+            <p><strong>Name:</strong> {{ event.title }}</p>
+            <p><strong>Category:</strong> {{ event.category }}</p>
+            <p><strong>Location:</strong> {{ event.location }}</p>
+            <p><strong>Start:</strong> {{ event.start_date }}</p>
+            <p><strong>End:</strong> {{ event.end_date }}</p>
+            <p><strong>Status:</strong> {{ event.status }}</p>
+            <p><strong>Owner:</strong> {{ event.created_by.username }}</p>
+            <p><strong>Total Capacity:</strong> {{ total_capacity }}</p>
+            <p><strong>Remaining:</strong> {{ remaining }}</p>
+        </div>
+    </div>
+
+    <div class="card soft-card">
+        <h2 class="section-title">Introduction</h2>
+        <p style="margin-bottom: 0;">{{ event.description }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="section-title">Session Schedule</h2>
+    <p class="section-subtitle">Read-only view for co-organisers or collaborators.</p>
+
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>Session Name</th>
+                <th>Time Period</th>
+                <th>Status</th>
+                <th>Location</th>
+                <th>Capacity</th>
+                <th>Accepted</th>
+                <th>Remaining</th>
+            </tr>
+            {% for session in sessions %}
+            <tr>
+                <td>{{ session.title }}</td>
+                <td>{{ session.session_time }}</td>
+                <td>{{ session.status }}</td>
+                <td>{{ session.session_location }}</td>
+                <td>{{ session.capacity }}</td>
+                <td>{{ session.accepted_count }}</td>
+                <td>{{ session.remaining_count }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">No sessions found.</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+{% endblock %}

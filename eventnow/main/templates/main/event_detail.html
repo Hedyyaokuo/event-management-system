@@ -1,0 +1,210 @@
+{#
+Participant-facing event detail page.
+
+This page shows event information, session schedule, remaining capacity and
+register buttons. The JavaScript at the bottom calls the capacity API so the
+displayed capacity can refresh without reloading the whole page.
+#}
+
+{% extends "main/base.html" %}
+
+{% block title %}{{ event.title }}{% endblock %}
+
+{% block content %}
+
+<div class="page-title">{{ event.title }}</div>
+
+<div class="grid-2">
+    <div class="card">
+        {% if event.image %}
+            <div class="event-image-frame">
+                <img src="{{ event.image.url }}" alt="{{ event.title }}">
+            </div>
+        {% else %}
+            <div class="event-image-frame placeholder-image">
+                Event image preview
+            </div>
+        {% endif %}
+
+        <div class="info-list">
+            <p><strong>Name:</strong> {{ event.title }}</p>
+            <p><strong>Category:</strong> {{ event.category }}</p>
+            <p><strong>Location:</strong> {{ event.location }}</p>
+            <p><strong>Start:</strong> {{ event.start_date }}</p>
+            <p><strong>End:</strong> {{ event.end_date }}</p>
+            <p><strong>Status:</strong> {{ event.status }}</p>
+            <p><strong>Capacity:</strong> <span id="event-remaining-count">{{ remaining }}</span> / <span id="event-total-capacity">{{ total_capacity }}</span></p>
+        </div>
+    </div>
+
+    <div class="card soft-card">
+        <h2 class="section-title">Introduction</h2>
+        <p style="margin-top: 0;">{{ event.description }}</p>
+
+        {% if event.status != 'active' %}
+            <p class="status-danger" style="margin-bottom: 0;">
+                This event is no longer available for registration.
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <h2 class="section-title">Session Schedule</h2>
+    <p class="section-subtitle">
+        Participants can only register for sessions that are open and still have remaining capacity.
+        Capacity is updated automatically.
+    </p>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Session Name</th>
+                    <th>Time Period</th>
+                    <th>Status</th>
+                    <th>Location</th>
+                    <th>Capacity</th>
+                    <th>Remaining</th>
+                    <th>Register</th>
+                </tr>
+            </thead>
+
+            <tbody id="participant-session-body">
+                {% for session in sessions %}
+                <tr id="session-row-{{ session.id }}" data-session-id="{{ session.id }}">
+                    <td>{{ session.title }}</td>
+                    <td>{{ session.session_time }}</td>
+                    <td id="session-status-{{ session.id }}">{{ session.status }}</td>
+                    <td>{{ session.session_location }}</td>
+                    <td id="capacity-{{ session.id }}">{{ session.capacity }}</td>
+                    <td id="remaining-{{ session.id }}">{{ session.remaining_count }}</td>
+
+                    <td id="register-cell-{{ session.id }}" data-apply-url="{% url 'apply_session' session.id %}">
+                        {% if event.status == 'active' %}
+                            {% if session.status == 'open' %}
+                                {% if session.remaining_count > 0 %}
+                                    <a href="{% url 'apply_session' session.id %}" class="button">Register</a>
+                                {% else %}
+                                    <span class="pill">Full</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="pill">Unavailable</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="pill">Unavailable</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr id="no-session-row">
+                    <td colspan="7">No sessions found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+/*
+Page-specific JavaScript for participant capacity updates.
+
+It calls session_capacity_api and updates event/session capacity numbers and
+register/full/unavailable states. The backend remains the real source of truth.
+*/
+const EVENT_IS_ACTIVE = "{{ event.status }}" === "active";
+
+function buildRegisterCell(session, applyUrl) {
+    if (!EVENT_IS_ACTIVE) {
+        return '<span class="pill">Unavailable</span>';
+    }
+
+    if (session.status !== "open") {
+        return '<span class="pill">Unavailable</span>';
+    }
+
+    if (session.remaining_count <= 0) {
+        return '<span class="pill">Full</span>';
+    }
+
+    return '<a href="' + applyUrl + '" class="button">Register</a>';
+}
+
+function updateParticipantCapacity() {
+    fetch("{% url 'session_capacity_api' event.id %}")
+    .then(function(response) {
+        return response.json();
+    })
+    .then(function(data) {
+        if (!data.success) {
+            return;
+        }
+
+        const totalCapacity = document.getElementById("event-total-capacity");
+        const remainingCount = document.getElementById("event-remaining-count");
+
+        if (totalCapacity && data.total_capacity !== undefined) {
+            totalCapacity.textContent = data.total_capacity;
+        }
+
+        if (remainingCount && data.event_remaining_count !== undefined) {
+            remainingCount.textContent = data.event_remaining_count;
+        }
+
+        const visibleSessionIds = data.sessions.map(function(session) {
+            return String(session.session_id);
+        });
+
+        document.querySelectorAll("#participant-session-body tr[data-session-id]").forEach(function(row) {
+            const rowSessionId = row.getAttribute("data-session-id");
+
+            if (!visibleSessionIds.includes(rowSessionId)) {
+                row.remove();
+            }
+        });
+
+        data.sessions.forEach(function(session) {
+            const capacityCell = document.getElementById("capacity-" + session.session_id);
+            const remainingCell = document.getElementById("remaining-" + session.session_id);
+            const statusCell = document.getElementById("session-status-" + session.session_id);
+            const registerCell = document.getElementById("register-cell-" + session.session_id);
+
+            if (capacityCell) {
+                capacityCell.textContent = session.capacity;
+            }
+
+            if (remainingCell) {
+                remainingCell.textContent = session.remaining_count;
+            }
+
+            if (statusCell) {
+                statusCell.textContent = session.status;
+            }
+
+            if (registerCell) {
+                const applyUrl = registerCell.getAttribute("data-apply-url");
+                registerCell.innerHTML = buildRegisterCell(session, applyUrl);
+            }
+        });
+
+        const remainingRows = document.querySelectorAll("#participant-session-body tr[data-session-id]");
+        const noSessionRow = document.getElementById("no-session-row");
+        const tableBody = document.getElementById("participant-session-body");
+
+        if (remainingRows.length === 0 && !noSessionRow && tableBody) {
+            tableBody.innerHTML = '<tr id="no-session-row"><td colspan="7">No sessions found.</td></tr>';
+        }
+    })
+    .catch(function() {
+        // Keep the page quiet. Capacity will be checked again automatically.
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    updateParticipantCapacity();
+    setInterval(updateParticipantCapacity, 10000);
+});
+</script>
+
+{% endblock %}

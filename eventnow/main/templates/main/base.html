@@ -1,0 +1,801 @@
+{#
+Main layout for logged-in EventNow users.
+
+This template provides the shared page shell: header, sidebar navigation,
+common CSS styles, responsive layout rules, and the EventNow Assistant widget.
+The assistant is placed here because it is reused across logged-in pages.
+#}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EventNow{% endblock %}</title>
+
+    <style>
+        :root {
+            --bg: #f4f8fc;
+            --surface: #ffffff;
+            --surface-soft: #f7fbff;
+            --sidebar: #edf4fb;
+            --primary: #3e6ea8;
+            --primary-dark: #2d5789;
+            --primary-light: #eaf2fb;
+            --text: #1f2937;
+            --heading: #16324f;
+            --muted: #6b7280;
+            --border: #d8e3f0;
+            --danger: #b42318;
+            --success: #157347;
+            --shadow: 0 12px 28px rgba(44, 91, 140, 0.10);
+            --radius-xl: 22px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        a {
+            color: var(--primary-dark);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .site-header-inner {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .brand-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--heading);
+        }
+
+        .brand-subtitle {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .user-badge {
+            padding: 9px 14px;
+            border-radius: 999px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border: 1px solid #c9dbef;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .layout {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 24px;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 94px;
+            align-self: start;
+            background: var(--sidebar);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            padding: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar-title {
+            margin: 4px 0 16px;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--heading);
+        }
+
+        .sidebar-nav {
+            display: grid;
+            gap: 10px;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.55);
+            transition: 0.2s;
+        }
+
+        .sidebar a:hover {
+            background: white;
+            text-decoration: none;
+        }
+
+        .content {
+            min-width: 0;
+        }
+
+        .page-title {
+            margin: 0 0 18px;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--heading);
+            line-height: 1.25;
+        }
+
+        .section-title {
+            margin: 0 0 10px;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--heading);
+        }
+
+        .section-subtitle {
+            margin: 0 0 18px;
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius-xl);
+            padding: 22px;
+            margin-bottom: 22px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(216, 227, 240, 0.75);
+        }
+
+        .soft-card {
+            background: var(--surface-soft);
+        }
+
+        .hero-card {
+            background: linear-gradient(135deg, var(--primary), #6d9bc9);
+            color: white;
+        }
+
+        .hero-card .page-title,
+        .hero-card .section-title {
+            color: white;
+        }
+
+        .stack {
+            display: grid;
+            gap: 12px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            align-items: end;
+        }
+
+        .event-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 22px;
+        }
+
+        .placeholder-image {
+            background: var(--primary-light);
+            border: 1px dashed #bfd4ea;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .event-image-frame {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            max-height: 360px;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--primary-light);
+            border: 1px solid #bfd4ea;
+            margin-bottom: 18px;
+        }
+
+        .event-image-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        .event-image-frame.compact {
+            max-height: 220px;
+            margin-bottom: 16px;
+        }
+
+        .event-image-frame.profile-card-image {
+            max-height: 210px;
+            margin-bottom: 14px;
+        }
+
+        .event-image-frame.placeholder-image {
+            min-height: auto;
+        }
+
+        .info-list p {
+            margin: 7px 0;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border: 1px solid #c9dbef;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+
+        .button:hover {
+            background: var(--primary-dark);
+            color: white;
+            text-decoration: none;
+        }
+
+        .button.secondary {
+            background: white;
+            color: var(--primary-dark);
+            border: 1px solid var(--border);
+        }
+
+        .button.secondary:hover {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .button.danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--heading);
+            font-size: 14px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            font: inherit;
+            background: white;
+            color: var(--text);
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(62, 110, 168, 0.14);
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--heading);
+            background: var(--surface-soft);
+            font-weight: 700;
+        }
+
+        .inline-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .status-danger {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        #assistant-widget {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 3000;
+        }
+
+        #assistant-toggle {
+            width: 64px;
+            height: 64px;
+            border-radius: 999px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: 800;
+            font-size: 17px;
+            cursor: pointer;
+            box-shadow: 0 14px 28px rgba(44, 91, 140, 0.22);
+        }
+
+        #assistant-toggle:hover {
+            background: var(--primary-dark);
+        }
+
+        #assistant-box {
+            display: none;
+            width: 450px;
+            height: 590px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: 0 18px 42px rgba(44, 91, 140, 0.20);
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .assistant-header {
+            padding: 16px 20px;
+            background: var(--primary);
+            color: white;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .assistant-header span {
+            font-size: 13px;
+            opacity: 0.95;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        #assistant-messages {
+            height: 438px;
+            padding: 16px;
+            overflow-y: auto;
+            background: var(--surface-soft);
+        }
+
+        .assistant-message {
+            padding: 12px 14px;
+            border-radius: 15px;
+            margin-bottom: 11px;
+            white-space: pre-line;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .assistant-message.bot {
+            background: white;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .assistant-message.user {
+            background: var(--primary);
+            color: white;
+            border: 1px solid var(--primary);
+            margin-left: auto;
+            max-width: 88%;
+        }
+
+        .assistant-message.loading {
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        .assistant-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0 6px;
+        }
+
+        .assistant-suggestion {
+            border: 1px solid #c9dbef;
+            background: white;
+            color: var(--primary-dark);
+            border-radius: 999px;
+            padding: 8px 11px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .assistant-suggestion:hover {
+            background: var(--primary-light);
+        }
+
+        #assistant-form {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            background: white;
+        }
+
+        #assistant-input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #assistant-form button {
+            border: none;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            padding: 0 16px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        #assistant-form button:hover {
+            background: var(--primary-dark);
+        }
+
+        @media (max-width: 1100px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+            }
+
+            .grid-2,
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .layout {
+                padding: 14px;
+            }
+
+            .site-header-inner {
+                padding: 14px;
+            }
+
+            .page-title {
+                font-size: 26px;
+            }
+
+            .section-title {
+                font-size: 21px;
+            }
+
+            .card {
+                padding: 18px;
+            }
+
+            .event-image-frame {
+                max-height: 260px;
+            }
+
+            .event-image-frame.compact,
+            .event-image-frame.profile-card-image {
+                max-height: 220px;
+            }
+
+            #assistant-widget {
+                right: 14px;
+                bottom: 14px;
+            }
+
+            #assistant-box {
+                width: calc(100vw - 28px);
+                height: 540px;
+            }
+
+            #assistant-messages {
+                height: 390px;
+            }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <div class="brand">
+                <div class="brand-title">EventNow</div>
+                <div class="brand-subtitle">Responsive event management platform</div>
+            </div>
+
+            <div class="header-right">
+                {% if user.is_authenticated %}
+                    <div class="user-badge">Hello, {{ user.username }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-title">Navigation</div>
+
+            <div class="sidebar-nav">
+                {% if user.is_authenticated %}
+                    {% if user.is_staff or user.is_superuser %}
+                        <a href="/eventnow/admin/">Admin Panel</a>
+                    {% else %}
+                        <a href="{% url 'event_list' %}">Main Page</a>
+
+                        {% if user.userprofile.global_role == 'organiser' %}
+                            <a href="{% url 'organiser_profile' %}">My Profile</a>
+                        {% else %}
+                            <a href="{% url 'profile' %}">My Profile</a>
+                        {% endif %}
+                    {% endif %}
+
+                    <a href="{% url 'logout' %}">Log Out</a>
+                {% endif %}
+            </div>
+        </aside>
+
+        <main class="content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% if user.is_authenticated and not user.is_staff and not user.is_superuser %}
+        <div id="assistant-widget">
+            <div id="assistant-box">
+                <div class="assistant-header">
+                    <div>EventNow Assistant</div>
+                    <span>Recommendation helper</span>
+                </div>
+
+                <div id="assistant-messages">
+                    <div class="assistant-message bot">
+                        Hi! I can answer EventNow questions and recommend suitable activities using event data, session capacity, and your needs.
+                    </div>
+
+                    <div class="assistant-suggestions">
+                        <button type="button" class="assistant-suggestion" data-question="I think I've been lacking exercise lately.">
+                            Need exercise
+                        </button>
+
+                        <button type="button" class="assistant-suggestion" data-question="Is there an easier event that does not require too much effort?">
+                            Easy activity
+                        </button>
+
+                        <button type="button" class="assistant-suggestion" data-question="I feel stressed and want to relax.">
+                            Feeling stressed
+                        </button>
+
+                        <button type="button" class="assistant-suggestion" data-question="I want to meet people and join something social.">
+                            Meet people
+                        </button>
+
+                        <button type="button" class="assistant-suggestion" data-question="How do I apply for a session?">
+                            How to apply
+                        </button>
+
+                        <button type="button" class="assistant-suggestion" data-question="What can organisers do?">
+                            Organiser help
+                        </button>
+
+                        <button type="button" class="assistant-suggestion" data-question="What sessions are available?">
+                            Available sessions
+                        </button>
+
+                        <button type="button" class="assistant-suggestion" data-question="What does pending mean?">
+                            Status meaning
+                        </button>
+                    </div>
+                </div>
+
+                <form id="assistant-form">
+                    {% csrf_token %}
+                    <input id="assistant-input" type="text" placeholder="Ask about events or tell me what you need..." autocomplete="off">
+                    <button type="submit">Send</button>
+                </form>
+            </div>
+
+            <button id="assistant-toggle" type="button">AI</button>
+        </div>
+
+        <script>
+            /*
+            Shared JavaScript for the EventNow Assistant widget.
+
+            The widget sends questions to eventnow_assistant_api and renders the
+            response. The backend decides the answer using EventNow data and
+            curated workflow knowledge.
+            */
+            const assistantToggle = document.getElementById("assistant-toggle");
+            const assistantBox = document.getElementById("assistant-box");
+            const assistantForm = document.getElementById("assistant-form");
+            const assistantInput = document.getElementById("assistant-input");
+            const assistantMessages = document.getElementById("assistant-messages");
+            const assistantSuggestionButtons = document.querySelectorAll(".assistant-suggestion");
+
+            assistantToggle.addEventListener("click", function () {
+                if (assistantBox.style.display === "block") {
+                    assistantBox.style.display = "none";
+                } else {
+                    assistantBox.style.display = "block";
+                }
+            });
+
+            function addAssistantMessage(text, type) {
+                const message = document.createElement("div");
+                message.className = "assistant-message " + type;
+                message.textContent = text;
+                assistantMessages.appendChild(message);
+                assistantMessages.scrollTop = assistantMessages.scrollHeight;
+                return message;
+            }
+
+            function askAssistant(question) {
+                const cleanedQuestion = question.trim();
+
+                if (!cleanedQuestion) {
+                    return;
+                }
+
+                addAssistantMessage(cleanedQuestion, "user");
+
+                const loadingMessage = addAssistantMessage("Checking EventNow data and ranking suitable options...", "bot loading");
+
+                const formData = new FormData();
+                formData.append("question", cleanedQuestion);
+
+                const csrfInput = assistantForm.querySelector("[name=csrfmiddlewaretoken]");
+                const csrfToken = csrfInput ? csrfInput.value : "";
+
+                fetch("{% url 'eventnow_assistant_api' %}", {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": csrfToken
+                    },
+                    body: formData
+                })
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+                    loadingMessage.className = "assistant-message bot";
+                    loadingMessage.textContent = data.answer || "I could not generate an answer.";
+                })
+                .catch(function () {
+                    loadingMessage.className = "assistant-message bot";
+                    loadingMessage.textContent = "Sorry, something went wrong while contacting the EventNow Assistant.";
+                });
+            }
+
+            assistantForm.addEventListener("submit", function (event) {
+                event.preventDefault();
+
+                const question = assistantInput.value.trim();
+                assistantInput.value = "";
+
+                askAssistant(question);
+            });
+
+            assistantSuggestionButtons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    const question = button.getAttribute("data-question");
+                    askAssistant(question);
+                });
+            });
+        </script>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,29 @@
+name: Django checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+      - name: 检查数据库迁移
+        run: python manage.py makemigrations --check --dry-run
+      - name: 运行 Django 系统检查
+        run: python manage.py check
+      - name: 运行测试
+        run: python manage.py test
